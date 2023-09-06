@@ -77,7 +77,6 @@ class CH9329(HID):
 
     def __init__(self, device, baudrate):
         self.hid_serial = serial.Serial(device, baudrate, timeout=1)
-        pass
 
     def keyboard_down(self, key):
         package = []

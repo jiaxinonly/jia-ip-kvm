@@ -53,17 +53,18 @@ def connect(msg):
     logger.info("ws连接")
 
     if client_num == 0:
-        # 启动后第一次访问 camera和ch9329 未初始化过，值为none时 或者 非一次访问，设备打开时
+        # 启动后第一次访问 camera和ch9329 未初始化过，值为none时 或者 非第一次访问，设备未打开时
         if (not camera or not ch9329) or (camera and ch9329 and (not camera.isOpened() or not ch9329.is_open())):
             print("启动设备")
             s = time.time()
             camera = cv2.VideoCapture(0)
             camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
             camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-            camera.set(6, cv2.VideoWriter.fourcc('M', 'J', 'P', 'G'))
+            camera.set(cv2.CAP_PROP_FPS, 60)
+            camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('M', 'J', 'P', 'G'))
             t = time.time()
             print(t - s)
-            ch9329 = CH9329('COM6', 19200)
+            ch9329 = CH9329('COM5', 115200)
 
     client_num = client_num + 1
     print(client_num)
@@ -90,6 +91,7 @@ def disconnect():
     print(client_num)
 
 
+# 键盘消息处理
 @socketio.on('keyMsg', namespace=NAMESPACE)
 def key_msg(msg):
     print(msg)
@@ -98,6 +100,7 @@ def key_msg(msg):
     ch9329.keyboard_up()
 
 
+# 鼠标消息处理
 @socketio.on('mouseMsg', namespace=NAMESPACE)
 def mouse_msg(msg: dict):
     # logger.debug(msg)
@@ -107,6 +110,7 @@ def mouse_msg(msg: dict):
         ch9329.mouse_relative_stop()
 
 
+# 视频消息处理
 @socketio.on('videoMsg', namespace=NAMESPACE)
 def video_msg(msg):
     print(msg)
@@ -122,7 +126,7 @@ def video_msg(msg):
             frame = buffer.tobytes()
             img = base64.b64encode(frame).decode()
             emit('videoMsg', 'data:image/jpg;base64,' + img)
-            time.sleep(0.0001)
+            time.sleep(0.001)
 
 
 if __name__ == '__main__':
