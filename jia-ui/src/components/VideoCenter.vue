@@ -1,6 +1,6 @@
 <template>
   <el-card id="video-center" shadow="hover" @click="cardClick">
-    <img id="video" :src="videoUrl" alt="" :style="{ 'object-fit': 'fill', 'cursor': cursor}">
+    <img id="video" :src="videoUrl" alt="">
   </el-card>
 </template>
 
@@ -12,7 +12,6 @@ export default {
     return {
       videoUrl: require('@/assets/loading.gif'),
       status: false,
-      cursor: 'auto',
       video: null,
       lastExitTime: "",
     }
@@ -141,11 +140,6 @@ export default {
 </script>
 
 <style scoped>
-/*#video-center {*/
-/*  min-height: 600px;*/
-/*  min-width: 1280px;*/
-/*}*/
-
 #video {
   height: 100%;
   width: 100%;

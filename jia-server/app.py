@@ -5,38 +5,22 @@
 # Email: 1094630886@qq.com
 import base64
 import time
-
-import flask
-from flask import Flask, render_template, Response
+from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 from lib.HID import CH9329
 import cv2
 import eventlet
 from lib.log import logger
+from lib.config import Config
 
 eventlet.monkey_patch()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'bPIaytvh7I12CY4x'
+app.config['SECRET_KEY'] = Config.secret_key
 
 socketio = SocketIO(app, cors_allowed_origins='*', async_mode='eventlet')  # async_mode='eventlet'
 
 NAMESPACE = '/ws'
-
-client_num = 0
-camera = None
-ch9329 = None
-
-
-# s = time.time()
-
-# camera = cv2.VideoCapture(0)
-# camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-# camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-# camera.set(6, cv2.VideoWriter.fourcc('M', 'J', 'P', 'G'))
-
-# t = time.time()
-# print(t - s)
 
 
 @app.route('/')
@@ -57,14 +41,14 @@ def connect(msg):
         if (not camera or not ch9329) or (camera and ch9329 and (not camera.isOpened() or not ch9329.is_open())):
             print("启动设备")
             s = time.time()
-            camera = cv2.VideoCapture(0)
-            camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-            camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-            camera.set(cv2.CAP_PROP_FPS, 60)
+            camera = cv2.VideoCapture(Config.video_index, cv2.CAP_DSHOW)
+            camera.set(cv2.CAP_PROP_FPS, Config.video_fps)
+            camera.set(cv2.CAP_PROP_FRAME_HEIGHT, Config.video_height)
+            camera.set(cv2.CAP_PROP_FRAME_WIDTH, Config.video_width)
             camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('M', 'J', 'P', 'G'))
             t = time.time()
             print(t - s)
-            ch9329 = CH9329('COM5', 115200)
+            ch9329 = CH9329('COM3', 115200)
 
     client_num = client_num + 1
     print(client_num)
@@ -94,7 +78,7 @@ def disconnect():
 # 键盘消息处理
 @socketio.on('keyMsg', namespace=NAMESPACE)
 def key_msg(msg):
-    print(msg)
+    # print(msg)
     ch9329.keyboard_down(msg)
     time.sleep(0.001)
     ch9329.keyboard_up()
@@ -110,11 +94,21 @@ def mouse_msg(msg: dict):
         ch9329.mouse_relative_stop()
 
 
+@socketio.on('frameMsg', namespace=NAMESPACE)
+def frame_msg(msg):
+    global camera
+    if msg.get("type", None) == "resolution":
+        print("设置分辨率：{} * {}".format(msg['height'], msg['width']))
+        camera.set(cv2.CAP_PROP_FRAME_HEIGHT, msg['height'])
+        camera.set(cv2.CAP_PROP_FRAME_WIDTH, msg['width'])
+    elif msg.get("type", None) == "fps":
+        print("设置fps：{}".format(msg['fps']))
+        camera.set(cv2.CAP_PROP_FPS, msg['fps'])
+
+
 # 视频消息处理
 @socketio.on('videoMsg', namespace=NAMESPACE)
 def video_msg(msg):
-    print(msg)
-    #
     while True:
         # 一帧帧循环读取摄像头的数据
         success, frame = camera.read()
@@ -130,4 +124,7 @@ def video_msg(msg):
 
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000)
+    client_num = 0
+    camera = None
+    ch9329 = None
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False)

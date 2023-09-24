@@ -25,18 +25,18 @@ export default {
 </script>
 
 <style>
-html, body, #app {
+html, body {
   height: 100vh;
   margin: 0;
 }
 
 
-#el-main{
-  padding: 2% 4%;
+#el-main {
   text-align: center;
-  margin:0 auto;
+  margin: 0 auto;
 }
 
+/* 顶部菜单栏挂到右侧 */
 .flex-grow {
   flex-grow: 1;
 }

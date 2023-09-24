@@ -1,0 +1,14 @@
+secret:
+  key: "bPIaytvh7I12CY4x"
+  username: "admin"
+  password: "admin@123"
+device:
+  video:
+    index: 1
+    frame:
+      fps: 60
+      height: 720
+      width: 1280
+  hid:
+    port: "COM3"
+    baudrate: 115200
