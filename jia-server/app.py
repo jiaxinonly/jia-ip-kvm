@@ -12,6 +12,7 @@ import cv2
 import eventlet
 from lib.log import logger
 from lib.config import Config
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 
 eventlet.monkey_patch()
 
@@ -22,14 +23,72 @@ socketio = SocketIO(app, cors_allowed_origins='*', async_mode='eventlet')  # asy
 
 NAMESPACE = '/ws'
 
+# Flask-Login configuration
+login_manager = LoginManager(app)
+login_manager.login_view = 'auth.login'
 
-@app.route('/')
-def hello_world():  # put application's code here
-    return render_template('index.html')
+
+# User class for Flask-Login
+class User(UserMixin):
+    def __init__(self, username, password):
+        self.id = username
+        self.username = username
+        self.password = password
+
+
+@login_manager.user_loader
+def load_user(id):
+    return User.get_id(id)
+
+
+
+@socketio.on('login', namespace=NAMESPACE)
+def login(msg):
+    logger.info(f"{msg['username']} {msg['password']}")
+    if msg['username'] == Config.username and msg['password'] == Config.password:
+        login_user(User(msg['username'], msg['password']))
+        emit('login', True)
+        logger.info(f"{msg['username']} 登录成功")
+    else:
+        emit('login', False)
+        logger.info(f"{msg['username']} 登录失败")
+
+
+@login_required
+@socketio.on('logout', namespace=NAMESPACE)
+def login(msg):
+    logout_user()
+    return "success"
 
 
 @socketio.on('connect', namespace=NAMESPACE)
-def connect(msg):
+def connect():
+    logger.info("ws 已连接")
+
+
+@socketio.on('disconnect', namespace=NAMESPACE)
+def disconnect():
+    logger.info("ws 已断开")
+    global client_num
+    client_num = client_num - 1
+
+    # 关闭设备
+    if client_num == 0:
+        print("等待10秒准备关闭")
+        time.sleep(10)
+        if client_num == 0:
+            print("等待结束，关闭资源")
+            ch9329.close()
+            camera.release()
+
+        else:
+            print("有新连接，退出关闭")
+
+    print(client_num)
+
+
+@socketio.on('kvmStart', namespace=NAMESPACE)
+def kvm_start():
     global client_num
     global camera
     global ch9329
@@ -51,27 +110,6 @@ def connect(msg):
             ch9329 = CH9329('COM3', 115200)
 
     client_num = client_num + 1
-    print(client_num)
-
-
-@socketio.on('disconnect', namespace=NAMESPACE)
-def disconnect():
-    print("ws 断开")
-    global client_num
-    client_num = client_num - 1
-
-    # 关闭设备
-    if client_num == 0:
-        print("等待10秒准备关闭")
-        time.sleep(10)
-        if client_num == 0:
-            print("等待结束，关闭资源")
-            ch9329.close()
-            camera.release()
-
-        else:
-            print("有新连接，退出关闭")
-
     print(client_num)
 
 

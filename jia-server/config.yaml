@@ -1,5 +1,5 @@
 secret:
-  key: "bPIaytvh7I12CY4x"
+  key: "bPIaytvh7I12CY4x"  # 后台flask的key，随便写
   username: "admin"
   password: "admin@123"
 device:

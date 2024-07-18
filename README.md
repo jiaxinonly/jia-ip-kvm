@@ -15,6 +15,8 @@
 ## jia-sever
 > python flask后台
 
+启动方式：python app.py
+
 ## jia-ui
 > vue前端
 
