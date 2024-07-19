@@ -3,18 +3,19 @@
 # Time: 2022/12/27 12:33
 # Author: jiaxin
 # Email: 1094630886@qq.com
+import eventlet
+eventlet.monkey_patch()
 import base64
 import time
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 from lib.HID import CH9329
 import cv2
-import eventlet
 from lib.log import logger
 from lib.config import Config
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 
-eventlet.monkey_patch()
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = Config.secret_key

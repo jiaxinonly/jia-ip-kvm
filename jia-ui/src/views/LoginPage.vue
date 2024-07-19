@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div id="login-page">
     <div class="login-container">
       <div class="left-container">
         <div class="title"><span>登录</span></div>
@@ -31,11 +31,14 @@ export default {
   },
   mounted() {
     this.sockets.subscribe('login', data => {
-       if (data){
-         console.log("登录成功")
-       } else {
-         console.log("登录失败")
-       }
+      if (data) {
+        console.log("登录成功")
+        this.$message.success("登录成功！")
+        this.$router.push('/kvm')
+      } else {
+        console.log("登录失败")
+        this.$message.error("用户名或密码错误！")
+      }
     })
   },
   methods: {
@@ -51,9 +54,16 @@ export default {
 </script>
 
 <style scoped>
+#login-page {
+  height: 100vh;
+  background-image: linear-gradient(to bottom right, rgb(114, 135, 254), rgb(130, 88, 186));
+  display: flex;
+  align-items: center; /* 垂直居中 */
+  justify-content: center; /* 水平居中 */
+}
+
 .login-container {
   width: 600px;
-  margin: 15% auto;
   border-radius: 15px;
   box-shadow: 0 10px 50px 0px rgb(59, 45, 159);
   background-color: rgb(95, 76, 194);
