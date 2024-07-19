@@ -17,7 +17,7 @@ export default {
     }
   },
   mounted() {
-    this.$socket.emit('videoMsg', 'start')
+    this.$socket.emit('videoMsg')
     this.sockets.subscribe('videoMsg', data => {
       this.videoUrl = data
     })
@@ -77,6 +77,30 @@ export default {
       keyEvent.preventDefault()
       let keyMsg = ''
       let ctrlTab = ['Control', 'Shift', 'Alt', 'Meta']
+      let keyMap = {
+        ':': ';',
+        '+': '=',
+        '<': ',',
+        '_': '-',
+        '>': '.',
+        '?': '/',
+        '~': '`',
+        '{': '[',
+        '}': ']',
+        '|': '\\',
+        '"': '\'',
+        ')': '0',
+        '!': '1',
+        '@': '2',
+        '#': '3',
+        '$': '4',
+        '%': '5',
+        '^': '6',
+        '&': '7',
+        '*': '8',
+        '(': '9',
+      }
+      console.log(keyMap)
 
       // 单独按下控制键时
       if (ctrlTab.indexOf(keyEvent.key) !== -1) {
@@ -85,19 +109,24 @@ export default {
         // 组合按键
         let ctrlKey = ''
         if (keyEvent.ctrlKey) {
-          ctrlKey = ctrlKey + 'ControlLeft+'
+          ctrlKey += 'ControlLeft+'
         }
         if (keyEvent.shiftKey) {
-          ctrlKey = ctrlKey + 'ShiftLeft+'
+          ctrlKey += 'ShiftLeft+'
         }
         if (keyEvent.altKey) {
-          ctrlKey = ctrlKey + 'AltLeft+'
+          ctrlKey += 'AltLeft+'
         }
         if (keyEvent.metaKey) {
-          ctrlKey = ctrlKey + 'MetaLeft+'
+          ctrlKey += 'MetaLeft+'
         }
-        keyMsg = ctrlKey + keyEvent.key
+        if (keyEvent.key in keyMap){
+          keyMsg = ctrlKey + keyMap[keyEvent.key]
+        } else {
+          keyMsg = ctrlKey + keyEvent.key
+        }
       }
+      console.log(keyEvent.key, keyEvent.code, keyEvent.keyCode)
       console.log(keyMsg)
 
       // 退出
