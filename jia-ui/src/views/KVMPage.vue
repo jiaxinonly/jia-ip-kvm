@@ -1,6 +1,6 @@
 <template>
   <div id="KVM-page">
-    <el-container>
+    <el-container id="el-container">
       <el-header>
         <TopNavigation></TopNavigation>
       </el-header>
@@ -26,5 +26,13 @@ export default {
 </script>
 
 <style scoped>
+#el-container{
+  height: 100vh;
+}
 
+#el-main{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 </style>

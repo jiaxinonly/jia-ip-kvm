@@ -42,7 +42,7 @@
         <el-menu-item index="2-2-1">视频采集器</el-menu-item>
         <el-menu-item index="2-4-2">HID设备</el-menu-item>
       </el-sub-menu>
-      <el-menu-item index="2-3">退出</el-menu-item>
+      <el-menu-item index="2-3" @click="logout">退出</el-menu-item>
     </el-sub-menu>
   </el-menu>
 </template>
@@ -75,6 +75,11 @@ export default {
       }
       console.log(frameMsg)
       this.$socket.emit('frameMsg', frameMsg)
+    },
+    logout() {
+      console.log("退出登录")
+      this.$socket.emit('logout')
+      this.$router.push("/")
     }
   }
 }

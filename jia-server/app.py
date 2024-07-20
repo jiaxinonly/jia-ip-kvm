@@ -25,36 +25,37 @@ NAMESPACE = '/ws'
 
 # Flask-Login configuration
 login_manager = LoginManager(app)
-login_manager.login_view = 'auth.login'
+login_manager.init_app(app)
 
 
 # User class for Flask-Login
 class User(UserMixin):
-    def __init__(self, username, password):
-        self.id = username
-        self.username = username
-        self.password = password
+    def __init__(self, id):
+        self.id = id
 
 
 @login_manager.user_loader
-def load_user(id):
-    return User.get_id(id)
+def load_user(user_id):
+    return User(user_id)
 
 
 @socketio.on('login', namespace=NAMESPACE)
 def login(msg):
     if msg['username'] == Config.username and msg['password'] == Config.password:
-        login_user(User(msg['username'], msg['password']))
+        login_user(User(msg['username']))
         emit('login', True)
+        logger.error(current_user.id)
         logger.info(f"{msg['username']} 登录成功")
     else:
         emit('login', False)
         logger.info(f"{msg['username']} 登录失败")
 
 
-@login_required
+
 @socketio.on('logout', namespace=NAMESPACE)
-def login():
+@login_required
+def logout():
+    logger.info(f"{current_user.id} 退出登录")
     logout_user()
     return "success"
 
@@ -89,6 +90,7 @@ def disconnect():
 
 # 键盘消息处理
 @socketio.on('keyMsg', namespace=NAMESPACE)
+@login_required
 def key_msg(msg):
     logger.debug(f"keyMsg消息: {msg}")
     global ch9329
@@ -99,6 +101,7 @@ def key_msg(msg):
 
 # 鼠标消息处理
 @socketio.on('mouseMsg', namespace=NAMESPACE)
+@login_required
 def mouse_msg(msg):
     logger.debug(f"mouseMsg消息：{msg}")
     global ch9329
@@ -109,6 +112,7 @@ def mouse_msg(msg):
 
 
 @socketio.on('frameMsg', namespace=NAMESPACE)
+@login_required
 def frame_msg(msg):
     logger.debug(f"frameMsg消息：{msg}")
     global camera
@@ -123,6 +127,7 @@ def frame_msg(msg):
 
 # 视频消息处理
 @socketio.on('videoMsg', namespace=NAMESPACE)
+@login_required
 def video_msg():
     global client_num
     global camera

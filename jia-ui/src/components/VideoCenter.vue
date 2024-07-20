@@ -1,6 +1,6 @@
 <template>
   <el-card id="video-center" shadow="hover" @click="cardClick">
-    <img id="video" :src="videoUrl" alt="">
+    <img id="video" :class="{loading: loading}" :src="videoUrl" alt="">
   </el-card>
 </template>
 
@@ -11,14 +11,19 @@ export default {
   data() {
     return {
       videoUrl: require('@/assets/loading.gif'),
-      status: false,
+      mouse_status: false,
+      key_status: false,
       video: null,
       lastExitTime: "",
+      loading: false
     }
   },
   mounted() {
     this.$socket.emit('videoMsg')
     this.sockets.subscribe('videoMsg', data => {
+      if (this.loading === false){
+        this.loading = true
+      }
       this.videoUrl = data
     })
     this.video = document.getElementById('video')
@@ -27,7 +32,7 @@ export default {
   methods: {
     cardClick() {
       console.log("点击了")
-      if (this.status === false) {
+      if (this.mouse_status === false) {
         // 保证退出后等待足够的时间再进入
         let waitTime = 1260
         if (this.lastExitTime && Date.now() - this.lastExitTime < waitTime) {
@@ -42,13 +47,12 @@ export default {
     },
     // 鼠标锁点状态改变时
     pointerLockChange: function () {
-      if (this.status === true) {
+      if (this.mouse_status === true) {
         // 设置状态为false
-        this.status = false
+        this.mouse_status = false
         // 恢复鼠标光标
         this.cursor = "auto"
         // 移除监听事件
-        window.removeEventListener("keydown", this.keyDown)
         window.removeEventListener('mousemove', this.mouseMove)
         window.removeEventListener('mousedown', this.mouseDown)
         // 恢复右击菜单
@@ -57,11 +61,15 @@ export default {
         }
         this.lastExitTime = Date.now()
         console.log('退出了')
-      } else if (this.status === false) {
+      } else if (this.mouse_status === false) {
         // 设置状态为true
-        this.status = true
+        this.mouse_status = true
+        if (this.key_status === false){
+          console.log("键盘监听")
+          this.key_status = true
+          window.addEventListener('keydown', this.keyDown)
+        }
         // 添加监听事件
-        window.addEventListener('keydown', this.keyDown)
         window.addEventListener('mousemove', this.mouseMove)
         window.addEventListener('mousedown', this.mouseDown)
         // 关闭右击菜单
@@ -75,6 +83,7 @@ export default {
     keyDown: function (keyEvent) {
       console.log(keyEvent)
       keyEvent.preventDefault()
+      keyEvent.stopPropagation()
       let keyMsg = ''
       let ctrlTab = ['Control', 'Shift', 'Alt', 'Meta']
       let keyMap = {
@@ -100,7 +109,6 @@ export default {
         '*': '8',
         '(': '9',
       }
-      console.log(keyMap)
 
       // 单独按下控制键时
       if (ctrlTab.indexOf(keyEvent.key) !== -1) {
@@ -126,12 +134,17 @@ export default {
           keyMsg = ctrlKey + keyEvent.key
         }
       }
-      console.log(keyEvent.key, keyEvent.code, keyEvent.keyCode)
+
       console.log(keyMsg)
 
       // 退出
-      if (keyMsg === 'Escape') {
-        console.log('exit')
+      if (keyMsg === 'ControlLeft+ShiftLeft+`') {
+        console.log('退出键盘控制')
+        if (this.key_status){
+          this.key_status = false
+          window.removeEventListener("keydown", this.keyDown)
+        }
+
       } else {
         this.$socket.emit('keyMsg', keyMsg)
       }
@@ -169,8 +182,26 @@ export default {
 </script>
 
 <style scoped>
-#video {
-  height: 100%;
+#video-center {
   width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+#video {
+  width: 100%;
+  height: 100%;
+  object-fit: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+#video.loading {
+  object-fit: fill;
 }
 </style>
