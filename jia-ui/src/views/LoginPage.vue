@@ -34,6 +34,7 @@ export default {
       if (data) {
         console.log("登录成功")
         this.$message.success("登录成功！")
+        localStorage.setItem('userLogin', 'true')
         this.$router.push('/kvm')
       } else {
         console.log("登录失败")

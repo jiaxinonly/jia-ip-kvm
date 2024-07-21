@@ -8,7 +8,7 @@ import eventlet
 eventlet.monkey_patch()
 import base64
 import time
-from flask import Flask, render_template
+from flask import Flask, session
 from flask_socketio import SocketIO, emit
 from lib.HID import CH9329
 import cv2
@@ -43,8 +43,8 @@ def load_user(user_id):
 def login(msg):
     if msg['username'] == Config.username and msg['password'] == Config.password:
         login_user(User(msg['username']))
+        session['username'] = msg['username']
         emit('login', True)
-        logger.error(current_user.id)
         logger.info(f"{msg['username']} 登录成功")
     else:
         emit('login', False)
@@ -57,11 +57,15 @@ def login(msg):
 def logout():
     logger.info(f"{current_user.id} 退出登录")
     logout_user()
+    session.pop('username', None)
     return "success"
 
 
 @socketio.on('connect', namespace=NAMESPACE)
 def connect():
+    logger.info(current_user)
+    if session.get('username'):
+        login_user(User(session['username']))
     logger.info("ws 已连接")
 
 
