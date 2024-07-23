@@ -8,7 +8,7 @@ import eventlet
 eventlet.monkey_patch()
 import base64
 import time
-from flask import Flask, session
+from flask import Flask, session, request
 from flask_socketio import SocketIO, emit
 from lib.HID import CH9329
 import cv2
@@ -21,7 +21,7 @@ app.config['SECRET_KEY'] = Config.secret_key
 
 socketio = SocketIO(app, cors_allowed_origins='*', async_mode='eventlet')  # async_mode='eventlet'
 
-NAMESPACE = '/ws'
+NAMESPACE = '/ws/'
 
 # Flask-Login configuration
 login_manager = LoginManager(app)
@@ -39,33 +39,47 @@ def load_user(user_id):
     return User(user_id)
 
 
-@socketio.on('login', namespace=NAMESPACE)
-def login(msg):
-    if msg['username'] == Config.username and msg['password'] == Config.password:
-        login_user(User(msg['username']))
-        session['username'] = msg['username']
-        emit('login', True)
-        logger.info(f"{msg['username']} 登录成功")
+@app.route('/api/login/', methods=['POST'])
+def login():
+    data = request.get_json()
+    if data['username'] == Config.username and data['password'] == Config.password:
+        login_user(User(data['username']))
+        logger.info(f"{data['username']} 登录成功")
+        return {
+            "status": "success",
+            "message": "登陆成功"
+        }
     else:
-        emit('login', False)
-        logger.info(f"{msg['username']} 登录失败")
+        logger.info(f"{data['username']} 登录失败")
+        return {
+            "status": "fail",
+            "message": "登录失败"
+        }
 
 
+@app.route('/api/userinfo/', methods=['GET'])
+@login_required
+def userinfo():
+    return {
+        "status": "success",
+        "message": current_user.id
+    }
 
-@socketio.on('logout', namespace=NAMESPACE)
+
+@app.route('/api/logout/', methods=['GET'])
 @login_required
 def logout():
     logger.info(f"{current_user.id} 退出登录")
     logout_user()
-    session.pop('username', None)
-    return "success"
+    return {
+        "status": "success",
+        "message": "退出登录"
+    }
 
 
 @socketio.on('connect', namespace=NAMESPACE)
 def connect():
-    logger.info(current_user)
-    if session.get('username'):
-        login_user(User(session['username']))
+    logger.info(current_user.id)
     logger.info("ws 已连接")
 
 
@@ -136,7 +150,7 @@ def video_msg():
     global client_num
     global camera
     global ch9329
-
+    logger.info(current_user)
     logger.info("video 已连接")
 
     if client_num == 0:

@@ -77,9 +77,9 @@ export default {
       this.$socket.emit('frameMsg', frameMsg)
     },
     logout() {
-      console.log("退出登录")
-      this.$socket.emit('logout')
-      localStorage.removeItem('userLogin')
+      this.axios.get("/api/logout/")
+      localStorage.removeItem('username')
+      localStorage.removeItem('password')
       this.$router.push("/")
     }
   }

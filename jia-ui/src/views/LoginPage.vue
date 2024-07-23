@@ -29,25 +29,20 @@ export default {
       password: ''
     }
   },
-  mounted() {
-    this.sockets.subscribe('login', data => {
-      if (data) {
-        console.log("登录成功")
-        this.$message.success("登录成功！")
-        localStorage.setItem('userLogin', 'true')
-        this.$router.push('/kvm')
-      } else {
-        console.log("登录失败")
-        this.$message.error("用户名或密码错误！")
-      }
-    })
-  },
   methods: {
     loginSubmit() {
-      console.log(this.username, this.password);
-      this.$socket.emit('login', {
+      this.axios.post('/api/login/', {
         username: this.username,
         password: this.password
+      }).then(response => {
+        if (response.data.status === 'success') {
+          this.$message.success("登录成功！")
+          localStorage.setItem('username', this.username)
+          localStorage.setItem('password', this.password)
+          this.$router.push('/kvm')
+        } else {
+          this.$message.error("用户名或密码错误！")
+        }
       })
     }
   }

@@ -24,10 +24,9 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
     const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
-    const userLogin = localStorage.getItem('userLogin');
-    console.log(to)
-    console.log(requiresAuth, userLogin)
-    if (requiresAuth && !userLogin) {
+    const username = localStorage.getItem('username');
+    const password = localStorage.getItem('password');
+    if (requiresAuth && !username && !password) {
         ElMessage.error("请先登录！")
         next('/');
     } else {

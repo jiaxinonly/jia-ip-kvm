@@ -19,9 +19,14 @@ export default {
     }
   },
   mounted() {
+    this.axios.get("/api/userinfo/").then(respose => {
+      if (respose.data.status === "success") {
+        this.$socket.open()
+      }
+    })
     this.$socket.emit('videoMsg')
     this.sockets.subscribe('videoMsg', data => {
-      if (this.loading === false){
+      if (this.loading === false) {
         this.loading = true
       }
       this.videoUrl = data
@@ -64,7 +69,7 @@ export default {
       } else if (this.mouse_status === false) {
         // 设置状态为true
         this.mouse_status = true
-        if (this.key_status === false){
+        if (this.key_status === false) {
           console.log("键盘监听")
           this.key_status = true
           window.addEventListener('keydown', this.keyDown)
@@ -128,7 +133,7 @@ export default {
         if (keyEvent.metaKey) {
           ctrlKey += 'MetaLeft+'
         }
-        if (keyEvent.key in keyMap){
+        if (keyEvent.key in keyMap) {
           keyMsg = ctrlKey + keyMap[keyEvent.key]
         } else {
           keyMsg = ctrlKey + keyEvent.key
@@ -140,7 +145,7 @@ export default {
       // 退出
       if (keyMsg === 'ControlLeft+ShiftLeft+`') {
         console.log('退出键盘控制')
-        if (this.key_status){
+        if (this.key_status) {
           this.key_status = false
           window.removeEventListener("keydown", this.keyDown)
         }
