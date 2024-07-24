@@ -12,3 +12,4 @@ device:
   hid:
     port: "COM3"
     baudrate: 115200
+  mac: "00:11:22:33:44:55"

@@ -8,13 +8,14 @@ import eventlet
 eventlet.monkey_patch()
 import base64
 import time
-from flask import Flask, session, request
+from flask import Flask, request
 from flask_socketio import SocketIO, emit
 from lib.HID import CH9329
 import cv2
 from lib.log import logger
 from lib.config import Config
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from wakeonlan import send_magic_packet
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = Config.secret_key
@@ -63,6 +64,17 @@ def userinfo():
     return {
         "status": "success",
         "message": current_user.id
+    }
+
+
+@app.route('/api/wol/', methods=['GET'])
+@login_required
+def wol():
+    logger.info(f"发送网络唤醒包 {Config.mac}")
+    send_magic_packet(Config.mac)
+    return {
+        "status": "success",
+        "message": "网络唤醒包已发送"
     }
 
 
@@ -150,7 +162,6 @@ def video_msg():
     global client_num
     global camera
     global ch9329
-    logger.info(current_user)
     logger.info("video 已连接")
 
     if client_num == 0:

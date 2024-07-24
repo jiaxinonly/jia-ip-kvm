@@ -13,3 +13,4 @@ class Config:
         video_width = config['device']['video']['frame']['width']
         hid_port = config['device']['hid']['port']
         baudrate = config['device']['hid']['baudrate']
+        mac = config['device']['mac']

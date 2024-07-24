@@ -36,18 +36,20 @@ export default {
   },
   methods: {
     cardClick() {
-      console.log("点击了")
-      if (this.mouse_status === false) {
-        // 保证退出后等待足够的时间再进入
-        let waitTime = 1260
-        if (this.lastExitTime && Date.now() - this.lastExitTime < waitTime) {
-          setTimeout(function () {
+      if (this.loading) {
+        console.log("点击了")
+        if (this.mouse_status === false) {
+          // 保证退出后等待足够的时间再进入
+          let waitTime = 1260
+          if (this.lastExitTime && Date.now() - this.lastExitTime < waitTime) {
+            setTimeout(function () {
+              this.video.requestPointerLock()
+            }, waitTime - (Date.now() - this.lastExitTime));
+          } else {
             this.video.requestPointerLock()
-          }, waitTime - (Date.now() - this.lastExitTime));
-        } else {
-          this.video.requestPointerLock()
+          }
+          console.log("锁上了")
         }
-        console.log("锁上了")
       }
     },
     // 鼠标锁点状态改变时
