@@ -3,82 +3,115 @@
 # Time: 2022/12/27 12:33
 # Author: jiaxin
 # Email: 1094630886@qq.com
+import eventlet
+
+eventlet.monkey_patch()
 import base64
 import time
-from flask import Flask, render_template
+from flask import Flask, session, request
 from flask_socketio import SocketIO, emit
 from lib.HID import CH9329
 import cv2
-import eventlet
 from lib.log import logger
 from lib.config import Config
-
-eventlet.monkey_patch()
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = Config.secret_key
 
 socketio = SocketIO(app, cors_allowed_origins='*', async_mode='eventlet')  # async_mode='eventlet'
 
-NAMESPACE = '/ws'
+NAMESPACE = '/ws/'
+
+# Flask-Login configuration
+login_manager = LoginManager(app)
+login_manager.init_app(app)
 
 
-@app.route('/')
-def hello_world():  # put application's code here
-    return render_template('index.html')
+# User class for Flask-Login
+class User(UserMixin):
+    def __init__(self, id):
+        self.id = id
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User(user_id)
+
+
+@app.route('/api/login/', methods=['POST'])
+def login():
+    data = request.get_json()
+    if data['username'] == Config.username and data['password'] == Config.password:
+        login_user(User(data['username']))
+        logger.info(f"{data['username']} 登录成功")
+        return {
+            "status": "success",
+            "message": "登陆成功"
+        }
+    else:
+        logger.info(f"{data['username']} 登录失败")
+        return {
+            "status": "fail",
+            "message": "登录失败"
+        }
+
+
+@app.route('/api/userinfo/', methods=['GET'])
+@login_required
+def userinfo():
+    return {
+        "status": "success",
+        "message": current_user.id
+    }
+
+
+@app.route('/api/logout/', methods=['GET'])
+@login_required
+def logout():
+    logger.info(f"{current_user.id} 退出登录")
+    logout_user()
+    return {
+        "status": "success",
+        "message": "退出登录"
+    }
 
 
 @socketio.on('connect', namespace=NAMESPACE)
-def connect(msg):
-    global client_num
-    global camera
-    global ch9329
-
-    logger.info("ws连接")
-
-    if client_num == 0:
-        # 启动后第一次访问 camera和ch9329 未初始化过，值为none时 或者 非第一次访问，设备未打开时
-        if (not camera or not ch9329) or (camera and ch9329 and (not camera.isOpened() or not ch9329.is_open())):
-            print("启动设备")
-            s = time.time()
-            camera = cv2.VideoCapture(Config.video_index, cv2.CAP_DSHOW)
-            camera.set(cv2.CAP_PROP_FPS, Config.video_fps)
-            camera.set(cv2.CAP_PROP_FRAME_HEIGHT, Config.video_height)
-            camera.set(cv2.CAP_PROP_FRAME_WIDTH, Config.video_width)
-            camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('M', 'J', 'P', 'G'))
-            t = time.time()
-            print(t - s)
-            ch9329 = CH9329('COM3', 115200)
-
-    client_num = client_num + 1
-    print(client_num)
+def connect():
+    logger.info(current_user.id)
+    logger.info("ws 已连接")
 
 
 @socketio.on('disconnect', namespace=NAMESPACE)
 def disconnect():
-    print("ws 断开")
+    logger.info("ws 已断开")
+    global camera
+    global ch9329
     global client_num
-    client_num = client_num - 1
+    if client_num > 0:
+        client_num -= 1
 
     # 关闭设备
-    if client_num == 0:
-        print("等待10秒准备关闭")
+    if client_num == 0 and (ch9329 or camera):
+        logger.info("等待10秒准备关闭")
         time.sleep(10)
-        if client_num == 0:
-            print("等待结束，关闭资源")
-            ch9329.close()
-            camera.release()
+        if client_num == 0 and (ch9329 or camera):
+            logger.info("等待结束，关闭资源")
+            if ch9329 or camera:
+                ch9329.close()
+                camera.release()
 
         else:
-            print("有新连接，退出关闭")
-
-    print(client_num)
+            logger.info("有新连接，退出关闭")
 
 
 # 键盘消息处理
 @socketio.on('keyMsg', namespace=NAMESPACE)
+@login_required
 def key_msg(msg):
-    # print(msg)
+    logger.debug(f"keyMsg消息: {msg}")
+    global ch9329
     ch9329.keyboard_down(msg)
     time.sleep(0.001)
     ch9329.keyboard_up()
@@ -86,8 +119,10 @@ def key_msg(msg):
 
 # 鼠标消息处理
 @socketio.on('mouseMsg', namespace=NAMESPACE)
-def mouse_msg(msg: dict):
-    # logger.debug(msg)
+@login_required
+def mouse_msg(msg):
+    logger.debug(f"mouseMsg消息：{msg}")
+    global ch9329
     ch9329.mouse_relative_move(msg['key'], msg['x'], msg['y'])
     if msg['key']:
         time.sleep(0.001)
@@ -95,20 +130,44 @@ def mouse_msg(msg: dict):
 
 
 @socketio.on('frameMsg', namespace=NAMESPACE)
+@login_required
 def frame_msg(msg):
+    logger.debug(f"frameMsg消息：{msg}")
     global camera
     if msg.get("type", None) == "resolution":
-        print("设置分辨率：{} * {}".format(msg['height'], msg['width']))
+        logger.info("设置分辨率：{} * {}".format(msg['height'], msg['width']))
         camera.set(cv2.CAP_PROP_FRAME_HEIGHT, msg['height'])
         camera.set(cv2.CAP_PROP_FRAME_WIDTH, msg['width'])
     elif msg.get("type", None) == "fps":
-        print("设置fps：{}".format(msg['fps']))
+        logger.info("设置fps：{}".format(msg['fps']))
         camera.set(cv2.CAP_PROP_FPS, msg['fps'])
 
 
 # 视频消息处理
 @socketio.on('videoMsg', namespace=NAMESPACE)
-def video_msg(msg):
+@login_required
+def video_msg():
+    global client_num
+    global camera
+    global ch9329
+    logger.info(current_user)
+    logger.info("video 已连接")
+
+    if client_num == 0:
+        # 启动后第一次访问 camera和ch9329 未初始化过，值为none时 或者 非第一次访问，设备未打开时
+        if (not camera or not ch9329) or (camera and ch9329 and (not camera.isOpened() or not ch9329.is_open())):
+            logger.info("启动设备")
+            s = time.time()
+            camera = cv2.VideoCapture(Config.video_index, cv2.CAP_DSHOW)
+            camera.set(cv2.CAP_PROP_FPS, Config.video_fps)
+            camera.set(cv2.CAP_PROP_FRAME_HEIGHT, Config.video_height)
+            camera.set(cv2.CAP_PROP_FRAME_WIDTH, Config.video_width)
+            camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('M', 'J', 'P', 'G'))
+            t = time.time()
+            logger.info(f"启动耗时 {t - s} 秒")
+            ch9329 = CH9329('COM3', 115200)
+
+    client_num = client_num + 1
     while True:
         # 一帧帧循环读取摄像头的数据
         success, frame = camera.read()
