@@ -71,7 +71,8 @@ def userinfo():
 @login_required
 def wol():
     logger.info(f"发送网络唤醒包 {Config.mac}")
-    send_magic_packet(Config.mac)
+    # 默认端口9
+    send_magic_packet(Config.mac, port=7)
     return {
         "status": "success",
         "message": "网络唤醒包已发送"
@@ -197,4 +198,4 @@ if __name__ == '__main__':
     client_num = 0
     camera = None
     ch9329 = None
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False, use_reloader=True)
